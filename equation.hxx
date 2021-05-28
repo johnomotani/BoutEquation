@@ -99,7 +99,6 @@ public:
   Equation(Field3D& f_ref, const std::string& f_name, Options& opt, Datafile& out_file,
       int& counter);
 
-  EquationTerm& first(const std::string& term_name);
   EquationTerm& operator[](const std::string& term_name);
 
   template<typename T>
