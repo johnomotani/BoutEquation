@@ -22,6 +22,63 @@
 #include <field3d.hxx>
 #include <options.hxx>
 
+/// Temporary accessor for an EquationTerm that can be modified (e.g. index-by-index). If
+/// save_term=true, updates ddt_f when it goes out of scope or if save_term=false just
+/// modifies ddt_f directly
+class EquationTermAccessor {
+public:
+  EquationTermAccessor(Field3D& term_in, Field3D& ddt_f_in, bool save_term_in)
+    : term(term_in), ddt_f(ddt_f_in), save_term(save_term_in) {}
+
+  ~EquationTermAccessor() {
+    if (save_term) {
+      ddt_f += term;
+    }
+  }
+
+  template<typename T>
+  EquationTermAccessor& operator+=(const T& rhs) {
+    term += rhs;
+    return *this;
+  }
+
+  template<typename T>
+  EquationTermAccessor& operator-=(const T& rhs) {
+    term -= rhs;
+    return *this;
+  }
+
+  // ElementAccessor ensures values can only be changed by addition or subtraction, so
+  // that update of ddt_f in the destructor is correct and consistent between
+  // save_term=true and save_term=false branches
+  class ElementAccessor {
+  public:
+    ElementAccessor(BoutReal& value_in) : value(value_in) {}
+    ElementAccessor& operator+=(BoutReal x) {
+      value += x;
+      return *this;
+    }
+    ElementAccessor& operator-=(BoutReal x) {
+      value -= x;
+      return *this;
+    }
+  private:
+    BoutReal& value;
+  };
+
+  ElementAccessor operator()(int jx, int jy, int jz) {
+    return ElementAccessor(term(jx, jy, jz));
+  }
+
+  ElementAccessor operator[](Ind3D i) {
+    return ElementAccessor(term[i]);
+  }
+private:
+  Field3D& term;
+  Field3D& ddt_f;
+  const bool save_term;
+};
+
 // Wrapper for Field3D, allowing a restricted number of operations to be performed on it.
 // Ensures that changes made to the EquationTerm are also applied consistently to ddt(f).
 class EquationTerm {
@@ -32,6 +89,10 @@ public:
 
   template<typename T>
   EquationTerm& operator=(const T& rhs) {
+    // Check operator=() not used twice in the same time-step: results would be
+    // inconsistent between save_term=true and save_term=false
+    ASSERT1(local_counter != global_counter);
+
     if (save_term) {
       term = rhs;
     }
@@ -78,6 +139,28 @@ public:
   const Field3D& field3D() {
     return term;
   }
+
+  // Modifiable access to the Field3D
+  EquationTermAccessor localAccessor() {
+    if (equation_counter != global_counter) {
+      // First term being added to equation on this time-step
+      equation_counter = global_counter;
+      ddt_f = 0.0;
+    }
+
+    if (save_term and local_counter != global_counter) {
+      // First time term is being modified on this time-step
+      term = 0.0;
+    }
+
+    local_counter = global_counter;
+
+    if (save_term) {
+      return EquationTermAccessor(term, ddt_f, save_term);
+    } else {
+      return EquationTermAccessor(ddt_f, ddt_f, save_term);
+    }
+  }
 private:
   friend class Equation;
 
@@ -99,7 +182,6 @@ public:
   Equation(Field3D& f_ref, const std::string& f_name, Options& opt, Datafile& out_file,
       int& counter);
 
-  EquationTerm& first(const std::string& term_name);
   EquationTerm& operator[](const std::string& term_name);
 
   template<typename T>
