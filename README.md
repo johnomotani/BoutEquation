@@ -16,6 +16,19 @@ Then add named terms in the ``rhs()`` method, e.g.
     density_equation["ExB advection"] = bracket(phi, n);
     density_equation["Parallel advection"] = Vpar_Grad_par(V, n);
 
+The terms can also be modified by index by using a local accessor, e.g.
+
+    auto local = density_equation.localAccessor();
+    for (auto i : foo) {
+      local[i] = 3.45 * foo[i];
+    }
+    for (RangeIterator r = mesh->iterateBndryLowerY(); !r.isDone(); r++) {
+      i = r.ind;
+      for (int k = 0; k < mesh->LocalNz; k++) {
+        local(i, mesh->ystart, k) = bar(i, mesh->ystart, k);
+      }
+    }
+
 If no options are set, this is equivalent (with negligible performance penalty)
 to adding directly to ddt(n) like
 
