@@ -58,6 +58,10 @@ Equation::Equation(Field3D& f_ref, const std::string& f_name, Options& opt,
       or options["save_all_terms_" + name].withDefault(false)) {
     save_equation = true;
   }
+
+  if (options["save_ddt"].withDefault(false)) {
+    output_file.addRepeat(ddt(f), name);
+  }
 }
 
 EquationTerm& Equation::operator[](const std::string& term_name) {
