@@ -89,6 +89,10 @@ public:
 
   template<typename T>
   EquationTerm& operator=(const T& rhs) {
+    // Check operator=() not used twice in the same time-step: results would be
+    // inconsistent between save_term=true and save_term=false
+    ASSERT1(local_counter != global_counter);
+
     if (save_term) {
       term = rhs;
     }
