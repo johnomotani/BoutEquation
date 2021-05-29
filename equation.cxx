@@ -60,7 +60,7 @@ Equation::Equation(Field3D& f_ref, const std::string& f_name, Options& opt,
   }
 
   if (options["save_ddt"].withDefault(false)) {
-    output_file.addRepeat(ddt(f), name);
+    output_file.addRepeat(ddt(f), "ddt("+name+")");
   }
 }
 
