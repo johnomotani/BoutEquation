@@ -11,6 +11,12 @@ To use, create ``Equation`` members of your ``PhysicsModel``, e.g.
 incremented every time the rhs() method is called, so that the ``Equation`` object knows
 to reset the internal map of fields if necessary.
 
+**Note:** The ``Equation`` object should be constructed after the variable that
+it evolves, otherwise the ``save_ddt`` option does not work. Therefore, for
+example, this example ``Equation density_equation`` declaration should be
+placed _after_ the ``Field3D n`` declaration in the ``PhysicsModel`` class
+definition.
+
 Then add named terms in the ``rhs()`` method, e.g.
 
     density_equation["ExB advection"] = bracket(phi, n);
@@ -43,3 +49,4 @@ But options can be set:
   dump files.
 - ``save_all_terms = true`` - saves all named terms at every output timestep; likely to
   lead to very large output files.
+- ``save_ddt = true`` - saves the final time derivative at every output timestep.
